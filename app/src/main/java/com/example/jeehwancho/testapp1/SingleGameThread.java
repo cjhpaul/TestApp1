@@ -1,5 +1,6 @@
 package com.example.jeehwancho.testapp1;
 
+import android.graphics.Canvas;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
@@ -18,17 +19,27 @@ public class SingleGameThread extends Thread {
         this.m_singleGamePanel = singleGamePanel;
     }
 
-    public void SetRunning(boolean isRunning) {
+    public void setRunning(boolean isRunning) {
         this.m_isRunning = isRunning;
     }
 
     @Override
     public void run() {
-        long tickCount = 0L;
+        Canvas canvas;
         Log.d(TAG, "Run has begun.");
         while (m_isRunning) {
-            tickCount++;
+            canvas = null;
+            try {
+                canvas = m_surfaceHolder.lockCanvas();
+                synchronized (m_surfaceHolder) {
+                    m_singleGamePanel.update();
+                    m_singleGamePanel.render(canvas);
+                }
+            } finally {
+                if (canvas != null)
+                    m_surfaceHolder.unlockCanvasAndPost(canvas);
+            }
         }
-        Log.d(TAG, "Run has ended. " + tickCount + " times.");
+        Log.d(TAG, "Run has ended.");
     }
 }
