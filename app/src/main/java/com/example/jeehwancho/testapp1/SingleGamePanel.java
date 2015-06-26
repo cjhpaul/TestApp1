@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -34,9 +35,12 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
     private int m_maxModelNum;
     private float[] m_Xs;
     private float[] m_Ys;
+    private Paint m_scorePaint;
+    private long m_score;
 
     public SingleGamePanel(Context context) {
         super(context);
+        m_score = 0;
         m_curTimeMillis = System.currentTimeMillis();
         m_lastTimeUpdated = m_curTimeMillis;
         m_die = new Random();
@@ -44,6 +48,10 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         m_singleGameThread = new SingleGameThread(getHolder(), this);
         setFocusable(true);
         m_models = new ArrayList();
+        m_scorePaint = new Paint();
+        m_scorePaint.setColor(Color.WHITE);
+        m_scorePaint.setStyle(Paint.Style.FILL);
+        m_scorePaint.setTextSize(20);
 
         DisplayMetrics metrics = new DisplayMetrics();
         ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -103,6 +111,8 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
                 m_cursorModel.makeVisibleFor(100, m_curTimeMillis);
                 m_cursorModel.setXY(event.getX(), event.getY());
                 int index = getIndexOfModelFromXY(event.getX(), event.getY());
+                if (m_models.get(index).isVisible(m_curTimeMillis))
+                    m_score++;
                 Log.d(TAG, "x=" + event.getX() + ",y=" + event.getY() + ", idx=" + String.valueOf(index));
             }
         }
@@ -123,6 +133,7 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
 
     public void render(Canvas canvas) {
         canvas.drawColor(Color.BLACK);
+        canvas.drawText(String.valueOf(m_score), 50, 50, m_scorePaint);
         m_cursorModel.draw(canvas, m_curTimeMillis);
         for (HitMeModel model : m_models)
             model.draw(canvas, m_curTimeMillis);

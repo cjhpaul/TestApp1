@@ -32,4 +32,8 @@ public class HitMeModel {
     public void makeVisibleFor(long additionalMillis, long curTimeMillis) {
         m_expirationTime = curTimeMillis + additionalMillis;
     }
+
+    public boolean isVisible(long curTimeMillis) {
+        return curTimeMillis < m_expirationTime;
+    }
 }
