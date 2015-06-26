@@ -9,13 +9,13 @@ import android.graphics.Canvas;
 public class HitMeModel {
     private Bitmap m_bitmap;
     private float m_X, m_Y;
-    private boolean m_isVisible;
+    private long m_expirationTime;
 
     public HitMeModel(Bitmap bitmap, float x, float y) {
         m_bitmap = bitmap;
         m_X = x;
         m_Y = y;
-        m_isVisible = false; //not visible by default
+        m_expirationTime = 0;
     }
 
     public void setXY(float x, float y) {
@@ -23,13 +23,13 @@ public class HitMeModel {
         m_Y = y;
     }
 
-    public void draw(Canvas canvas) {
-        if (m_isVisible) {
+    public void draw(Canvas canvas, long curTimeMillis) {
+        if (curTimeMillis < m_expirationTime) {
             canvas.drawBitmap(m_bitmap, m_X, m_Y, null);
         }
     }
 
-    public void update(boolean isVisible) {
-        m_isVisible = isVisible;
+    public void makeVisibleFor(long additionalMillis, long curTimeMillis) {
+        m_expirationTime = curTimeMillis + additionalMillis;
     }
 }
