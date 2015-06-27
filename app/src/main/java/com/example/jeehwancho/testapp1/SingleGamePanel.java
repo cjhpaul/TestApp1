@@ -21,6 +21,12 @@ import java.util.Random;
 
 /**
  * Created by jeehwancho on 6/22/15.
+ * Reward:
+ * (1) user clicks a right model.
+ *
+ * Penalty:
+ * (1) user clicks a wrong model.
+ * (2) model went off while not getting hit
  */
 public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
@@ -38,30 +44,40 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
     private Paint m_scorePaint;
     private long m_score;
 
+    //time variables
     private long m_curTimeMillis;
     private long m_lastTimeUpdated;
     private long m_startTime;
     private long m_timeLeft;
 
+    //difficulty variables
+    private long m_difficultyUpdateInterval;
+    private long m_difficultyVisibilityInterval;
+    private long m_difficultyNumObjects;
+
     public SingleGamePanel(Context context) {
         super(context);
-        m_score = 0;
-        m_die = new Random();
         getHolder().addCallback(this);
         m_singleGameThread = new SingleGameThread(getHolder(), this);
         setFocusable(true);
+
+        m_score = 0;
+        m_die = new Random();
         m_models = new ArrayList();
 
+        //get screen size
         DisplayMetrics metrics = new DisplayMetrics();
         ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(metrics);
         m_h = metrics.heightPixels / 10;
         m_w = metrics.widthPixels / 4;
 
+        //init painter for texts
         m_scorePaint = new Paint();
         m_scorePaint.setColor(Color.WHITE);
         m_scorePaint.setStyle(Paint.Style.FILL);
         m_scorePaint.setTextSize(m_h / 3);
 
+        //init images
         m_bitmapPikachu = BitmapFactory.decodeResource(getResources(), R.drawable.pikachu);
         m_bitmapPikachu = Bitmap.createScaledBitmap(m_bitmapPikachu, (int) m_w, (int) m_h * 2, true);
         m_cursorModel = new HitMeModel(m_bitmapPikachu, 0, 0);
@@ -80,6 +96,12 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         Assert.assertEquals(16, m_models.size());
         m_maxModelNum = m_models.size();
 
+        //init difficulties
+        m_difficultyNumObjects = 1;
+        m_difficultyUpdateInterval = 1000;
+        m_difficultyVisibilityInterval = 1000;
+
+        //init time variables - this has to go last
         m_curTimeMillis = System.currentTimeMillis();
         m_lastTimeUpdated = m_curTimeMillis;
         m_startTime = m_curTimeMillis;
@@ -111,6 +133,13 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         Log.d(TAG, "surfaceDestroyed has ended.");
     }
 
+    /**
+     * When it is called: when user touches screen
+     * What it does:
+     * (1) detects touch gestures
+     * (2) gives reward or penalty
+     * (3) exits back to main activity
+     */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -120,15 +149,26 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
             } else {
                 m_cursorModel.makeVisibleFor(100, m_curTimeMillis);
                 m_cursorModel.setXY(event.getX(), event.getY());
+
                 int index = getIndexOfModelFromXY(event.getX(), event.getY());
-                if (m_models.get(index).isVisible(m_curTimeMillis))
-                    m_score++;
+                if (m_models.get(index).hit(m_curTimeMillis))
+                    updateScoreAndDifficulties(1, 0);
+                else //wrong model, penalty
+                    updateScoreAndDifficulties(-1, 1000);
                 Log.d(TAG, "x=" + event.getX() + ",y=" + event.getY() + ", idx=" + String.valueOf(index));
             }
         }
         return super.onTouchEvent(event);
     }
 
+    /**
+     * When it is called: every cycle. For that reason, it needs to be really efficient.
+     * What it does:
+     * (1) controls difficulty of game: update interval, visibility interval, # models
+     * (2) keeps track of timer
+     * (3) spawns random models by giving them visibility time
+     * (4) detects time-out models and gives respective penalties
+     */
     public void update() {
         //this should be the only place to update current time
         m_curTimeMillis = System.currentTimeMillis();
@@ -138,14 +178,26 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
             ((Activity) getContext()).finish();
         }
         //if update interval (in millis) has passed, do the actual update
-        if (hasLastUpdatedElapsedFor(1000)) {
-            //randomly pick one model (for now), and make it visible
-            int randomIndex = m_die.nextInt(m_maxModelNum);
-            Log.d(TAG, "idx=" + String.valueOf(randomIndex));
-            m_models.get(randomIndex).makeVisibleFor(1000, m_curTimeMillis);
+        if (hasLastUpdatedElapsedFor(m_difficultyUpdateInterval)) {
+            for (HitMeModel model : m_models) {
+                if (model.checkIfTimeOut(m_curTimeMillis)) {
+                    updateScoreAndDifficulties(-1, 1000);
+                }
+            }
+            //randomly pick models, and make them visible
+            for (long i = 0; i < m_difficultyNumObjects; i++) {
+                int randomIndex = m_die.nextInt(m_maxModelNum);
+                Log.d(TAG, "idx=" + String.valueOf(randomIndex));
+                m_models.get(randomIndex).makeVisibleFor(m_difficultyVisibilityInterval, m_curTimeMillis);
+            }
         }
     }
 
+    /**
+     * When it is called: every cycle. For that reason, it needs to be really efficient.
+     * What it does:
+     * (1) draw whatever appears in screen.
+     */
     public void render(Canvas canvas) {
         canvas.drawColor(Color.BLACK);
         canvas.drawText("Score: " + String.valueOf(m_score) + ", Time: " + String.valueOf(m_timeLeft),
@@ -185,5 +237,18 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
 
     public long getScore() {
         return m_score;
+    }
+
+    //m_difficultyUpdateInterval - m_score
+    //m_difficultyVisibilityInterval - m_score
+    //m_difficultyNumObjects incremented every 16-score
+    private void updateScoreAndDifficulties(long scoreIncrement, long timeDecrement) {
+        m_score = m_score + scoreIncrement;
+        if (m_score < 0)
+            m_score = 0;
+        m_difficultyUpdateInterval = 1000 - m_score;
+        m_difficultyVisibilityInterval = 1000 - m_score;
+        m_difficultyNumObjects = (m_score >> 4) + 1;
+        m_startTime -= timeDecrement;
     }
 }
