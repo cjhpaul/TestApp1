@@ -23,7 +23,7 @@ import java.util.Random;
  * Created by jeehwancho on 6/22/15.
  */
 public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callback {
-    //changes
+    //changes2
     private static final String TAG = SingleGamePanel.class.getSimpleName();
     private SingleGameThread m_singleGameThread;
     private float m_h, m_w;
