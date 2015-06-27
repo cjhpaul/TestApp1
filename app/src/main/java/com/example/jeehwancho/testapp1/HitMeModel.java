@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 
 /**
  * Created by jeehwancho on 6/24/15.
+ * Model with FSM and bitmap
  */
 public class HitMeModel {
     private Bitmap m_bitmap;
@@ -27,7 +28,7 @@ public class HitMeModel {
     public void draw(Canvas canvas, long curTimeMillis) {
         //if animated, do animation
         //otherwise, you just draw stuff
-        if (curTimeMillis < m_expirationTime) {
+        if (isVisible()) {
             canvas.drawBitmap(m_bitmap, m_X, m_Y, null);
         }
     }
@@ -39,17 +40,14 @@ public class HitMeModel {
 
     //public void animateModel(Bitmap[] bitmaps, long interval)
 
-    /**
-     * @param curTimeMillis
-     * @return returns true if currently visible. False otherwise.
-     */
-    public boolean hit(long curTimeMillis) {
+    public boolean hit() {
+        boolean visible = isVisible();
         m_state.actionHit();
-        return isVisible(curTimeMillis);
+        return visible;
     }
 
     public boolean checkIfTimeOut(long curTimeMillis) {
-        if (!isVisible(curTimeMillis)) { //if time out (so it became invisible)
+        if (!isExpired(curTimeMillis)) { //if time out (so it became invisible)
             m_state.actionTimeOut();
             if (m_state.getState() == State.Invisible && m_state.getTimeoutPenalty())
                 return true;
@@ -57,7 +55,11 @@ public class HitMeModel {
         return false;
     }
 
-    private boolean isVisible(long curTimeMillis) {
+    public boolean isVisible() {
+        return m_state.getState() == State.Visible;
+    }
+
+    private boolean isExpired(long curTimeMillis) {
         return curTimeMillis < m_expirationTime;
     }
 
@@ -103,8 +105,6 @@ public class HitMeModel {
             if (m_state == State.Invisible) {
                 m_state = State.Visible;
                 m_timeoutPenalty = false;
-            } else if (m_state == State.Visible) {
-                //not possible
             }
         }
     }

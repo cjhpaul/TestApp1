@@ -40,7 +40,6 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
     private float[] m_Xs;
     private float[] m_Ys;
     private float m_h, m_w;
-    private HitMeModel m_cursorModel;
     private List<HitMeModel> m_models;
 
     //images & paints
@@ -84,7 +83,6 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         //init images
         m_bitmapPikachu = BitmapFactory.decodeResource(getResources(), R.drawable.pikachu);
         m_bitmapPikachu = Bitmap.createScaledBitmap(m_bitmapPikachu, (int) m_w, (int) m_h * 2, true);
-        m_cursorModel = new HitMeModel(m_bitmapPikachu, 0, 0);
 
         //generate 4by4 models
         m_Xs = new float[4];
@@ -154,11 +152,8 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
                 m_singleGameThread.setRunning(false);
                 ((Activity) getContext()).finish();
             } else {
-                m_cursorModel.makeVisibleFor(100, m_curTimeMillis);
-                m_cursorModel.setXY(event.getX(), event.getY());
-
                 int index = getIndexOfModelFromXY(event.getX(), event.getY());
-                if (m_models.get(index).hit(m_curTimeMillis))
+                if (m_models.get(index).hit())
                     updateScoreAndDifficulties(1, 0);
                 else //wrong model, penalty
                     updateScoreAndDifficulties(-1, 1000);
@@ -209,7 +204,6 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         canvas.drawColor(Color.BLACK);
         canvas.drawText("Score: " + String.valueOf(m_score) + ", Time: " + String.valueOf(m_timeLeft),
                 m_w / 2, m_h / 2, m_scorePaint);
-        m_cursorModel.draw(canvas, m_curTimeMillis);
         for (HitMeModel model : m_models)
             model.draw(canvas, m_curTimeMillis);
     }
