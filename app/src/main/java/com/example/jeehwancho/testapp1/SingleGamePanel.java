@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.support.annotation.NonNull;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -32,17 +33,19 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
 
     private static final String TAG = SingleGamePanel.class.getSimpleName();
     private SingleGameThread m_singleGameThread;
-    private float m_h, m_w;
-    private HitMeModel m_cursorModel;
-    private List<HitMeModel> m_models;
-    private Bitmap m_bitmapPikachu;
 
+    //coordinates & models & die
     private Random m_die;
     private int m_maxModelNum;
     private float[] m_Xs;
     private float[] m_Ys;
+    private float m_h, m_w;
+    private HitMeModel m_cursorModel;
+    private List<HitMeModel> m_models;
+
+    //images & paints
+    private Bitmap m_bitmapPikachu;
     private Paint m_scorePaint;
-    private long m_score;
 
     //time variables
     private long m_curTimeMillis;
@@ -54,16 +57,17 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
     private long m_difficultyUpdateInterval;
     private long m_difficultyVisibilityInterval;
     private long m_difficultyNumObjects;
+    private long m_score;
 
     public SingleGamePanel(Context context) {
+        //setup screen to begin with
         super(context);
         getHolder().addCallback(this);
         m_singleGameThread = new SingleGameThread(getHolder(), this);
         setFocusable(true);
 
-        m_score = 0;
+        //init a die
         m_die = new Random();
-        m_models = new ArrayList();
 
         //get screen size
         DisplayMetrics metrics = new DisplayMetrics();
@@ -85,6 +89,7 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         //generate 4by4 models
         m_Xs = new float[4];
         m_Ys = new float[4];
+        m_models = new ArrayList<>();
         int index_i = 0;
         for (int i = 1; i < 9; i += 2) { //i corresponds to Y
             m_Ys[index_i++] = m_h * i;
@@ -106,6 +111,7 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         m_lastTimeUpdated = m_curTimeMillis;
         m_startTime = m_curTimeMillis;
         m_timeLeft = 60000;
+        m_score = 0;
     }
 
     @Override
@@ -128,6 +134,7 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
                 m_singleGameThread.join();
                 retry = false;
             } catch (InterruptedException e) {
+                Log.d(TAG, e.getMessage());
             }
         }
         Log.d(TAG, "surfaceDestroyed has ended.");
@@ -141,7 +148,7 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
      * (3) exits back to main activity
      */
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean onTouchEvent(@NonNull MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             if (event.getY() > getHeight() - 50) {
                 m_singleGameThread.setRunning(false);
