@@ -23,15 +23,14 @@ import java.util.Random;
  * Created by jeehwancho on 6/22/15.
  */
 public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callback {
-    //changes2
+
     private static final String TAG = SingleGamePanel.class.getSimpleName();
     private SingleGameThread m_singleGameThread;
     private float m_h, m_w;
     private HitMeModel m_cursorModel;
     private List<HitMeModel> m_models;
     private Bitmap m_bitmapPikachu;
-    private long m_curTimeMillis;
-    private long m_lastTimeUpdated;
+
     private Random m_die;
     private int m_maxModelNum;
     private float[] m_Xs;
@@ -39,25 +38,30 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
     private Paint m_scorePaint;
     private long m_score;
 
+    private long m_curTimeMillis;
+    private long m_lastTimeUpdated;
+    private long m_startTime;
+    private long m_timeLeft;
+
     public SingleGamePanel(Context context) {
         super(context);
         m_score = 0;
-        m_curTimeMillis = System.currentTimeMillis();
-        m_lastTimeUpdated = m_curTimeMillis;
         m_die = new Random();
         getHolder().addCallback(this);
         m_singleGameThread = new SingleGameThread(getHolder(), this);
         setFocusable(true);
         m_models = new ArrayList();
-        m_scorePaint = new Paint();
-        m_scorePaint.setColor(Color.WHITE);
-        m_scorePaint.setStyle(Paint.Style.FILL);
-        m_scorePaint.setTextSize(20);
 
         DisplayMetrics metrics = new DisplayMetrics();
         ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(metrics);
         m_h = metrics.heightPixels / 10;
         m_w = metrics.widthPixels / 4;
+
+        m_scorePaint = new Paint();
+        m_scorePaint.setColor(Color.WHITE);
+        m_scorePaint.setStyle(Paint.Style.FILL);
+        m_scorePaint.setTextSize(m_h / 3);
+
         m_bitmapPikachu = BitmapFactory.decodeResource(getResources(), R.drawable.pikachu);
         m_bitmapPikachu = Bitmap.createScaledBitmap(m_bitmapPikachu, (int) m_w, (int) m_h * 2, true);
         m_cursorModel = new HitMeModel(m_bitmapPikachu, 0, 0);
@@ -75,6 +79,11 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         }
         Assert.assertEquals(16, m_models.size());
         m_maxModelNum = m_models.size();
+
+        m_curTimeMillis = System.currentTimeMillis();
+        m_lastTimeUpdated = m_curTimeMillis;
+        m_startTime = m_curTimeMillis;
+        m_timeLeft = 60000;
     }
 
     @Override
@@ -123,6 +132,11 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
     public void update() {
         //this should be the only place to update current time
         m_curTimeMillis = System.currentTimeMillis();
+        m_timeLeft = 60000 - m_curTimeMillis + m_startTime;
+        if (m_timeLeft < 0) {
+            m_singleGameThread.setRunning(false);
+            ((Activity) getContext()).finish();
+        }
         //if update interval (in millis) has passed, do the actual update
         if (hasLastUpdatedElapsedFor(1000)) {
             //randomly pick one model (for now), and make it visible
@@ -134,7 +148,8 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
 
     public void render(Canvas canvas) {
         canvas.drawColor(Color.BLACK);
-        canvas.drawText(String.valueOf(m_score), 50, 50, m_scorePaint);
+        canvas.drawText("Score: " + String.valueOf(m_score) + ", Time: " + String.valueOf(m_timeLeft),
+                m_w / 2, m_h / 2, m_scorePaint);
         m_cursorModel.draw(canvas, m_curTimeMillis);
         for (HitMeModel model : m_models)
             model.draw(canvas, m_curTimeMillis);
@@ -166,5 +181,9 @@ public class SingleGamePanel extends SurfaceView implements SurfaceHolder.Callba
         if (yIndex < 0)
             return -1;
         return yIndex * 4 + xIndex;
+    }
+
+    public long getScore() {
+        return m_score;
     }
 }
